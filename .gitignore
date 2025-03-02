@@ -7,6 +7,7 @@ venv/
 sagemaker/credentials.ini
 */credentials.ini
 .cursorrules
+.vscode/
 .cursorignore
 debug*
 ./wandb/
