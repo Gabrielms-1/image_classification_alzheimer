@@ -1,10 +1,9 @@
 import torch
-import torch.nn as nn
 import torch.optim as optim
-from sklearn.metrics import recall_score, f1_score
 import os
 import argparse
 import wandb
+from datetime import datetime
 
 from dataset import FolderBasedDataset, create_data_loaders
 from network import AlexNet
@@ -17,11 +16,15 @@ def create_dataloaders(train_dir, val_dir, resize, batch_size):
 
     return train_dataloader, val_dataloader
 
-def train_model(model, train_dataloader, val_dataloader, criterion, optimizer, device):
-    
+def train_model(model, epochs, train_dataloader, val_dataloader, criterion, optimizer, device):
+    train_losses = []
+    train_accuracies = []
     model.train()
 
-    for i in range(args.epochs):
+    for i in range(epochs):
+        epoch_loss = 0
+        correct_predictions = 0
+        total_examples = 0
 
         for images, labels, _ in train_dataloader:
             images = images.to(device)
@@ -30,24 +33,42 @@ def train_model(model, train_dataloader, val_dataloader, criterion, optimizer, d
             optimizer.zero_grad()
 
             outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
+            _, predicted = torch.max(outputs.detach(), 1) 
             loss = criterion(outputs, labels)
             loss.backward()
-            optimizer.step()    
-    pass
+            optimizer.step()   
+
+            epoch_loss += loss.item() * images.size(0) # loss x batch size
+
+            correct_predictions += (predicted == labels).sum().item()
+            total_examples += labels.size(0)
+
+        epoch_loss = epoch_loss / len(train_dataloader.dataset)
+        train_losses.append(epoch_loss)
+
+        epoch_accuracy = correct_predictions / total_examples
+        train_accuracies.append(epoch_accuracy)
+    
+        wandb.log({
+            "epoch": i+1,
+            "loss": epoch_loss,
+            "accuracy": epoch_accuracy
+        })
+    return train_losses, train_accuracies
+
 
 def main(args):
-    # wandb.init(
-    #     project=f"",
-    #     name=f"",
-    #     config={
-    #         "epochs": args.epochs,
-    #         "batch_size": args.batch_size,
-    #         "learning_rate": args.learning_rate,
-    #         "num_classes": args.num_classes,
-    #         "resize": args.resize
-    #     }
-    # )
+    wandb.init(
+        project=f"{args.model_name}",
+        name=f"{args.model_name}_{datetime.now().strftime('%d-%m-%Y_%H-%M')}",
+        config={
+            "epochs": args.epochs,
+            "batch_size": args.batch_size,
+            "learning_rate": args.learning_rate,
+            "num_classes": args.num_classes,
+            "resize": args.resize
+        }
+    )
 
     os.makedirs("/opt/ml/checkpoints", exist_ok=True)
 
@@ -61,7 +82,9 @@ def main(args):
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), args.learning_rate, weight_decay=0.0001)
 
-    train_model(model, train_dataloader, val_dataloader, criterion, optimizer, device)
+    train_losses = train_model(model, args.epochs, train_dataloader, val_dataloader, criterion, optimizer, device)
+
+    wandb.finish()
 
     return
 

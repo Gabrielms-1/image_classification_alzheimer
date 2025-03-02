@@ -84,6 +84,7 @@ requests==2.32.3
 rich==13.9.4
 ruamel.yaml==0.18.10
 ruamel.yaml.clib==0.2.12
+sagemaker
 scikit-learn==1.6.1
 scipy==1.15.2
 scmrepo==3.3.10

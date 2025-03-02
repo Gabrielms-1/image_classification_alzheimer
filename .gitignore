@@ -11,3 +11,4 @@ sagemaker/credentials.ini
 .cursorignore
 debug*
 ./wandb/
+sagemaker/credentials.ini
