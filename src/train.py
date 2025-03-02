@@ -7,6 +7,7 @@ from datetime import datetime
 
 from dataset import FolderBasedDataset, create_data_loaders
 from network import AlexNet
+from config import Config
 
 def create_dataloaders(train_dir, val_dir, resize, batch_size):
     train_dataset = FolderBasedDataset(train_dir, resize)
