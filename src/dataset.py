@@ -32,7 +32,7 @@ class FolderBasedDataset(Dataset):
     
 
     def _get_images_path(self):
-        all_items = glob.glob(os.path.join(self.root_dir, '**', '*', '*.jpg'), recursive=True)
+        all_items = glob.glob(os.path.join(self.root_dir, '**', '*.jpg'), recursive=True)
         labels = [item.split("/")[-2] for item in all_items]
         
         return all_items, labels
@@ -40,10 +40,9 @@ class FolderBasedDataset(Dataset):
     def _get_transformations(self):
         transformations = transforms.Compose([
             transforms.Resize((self.resize, self.resize), interpolation=transforms.InterpolationMode.LANCZOS),  
+            transforms.Grayscale(num_output_channels=1),
             transforms.ToTensor(),  
-            # transforms.Grayscale(num_output_channels=1),       
-            transforms.Normalize(mean=[0.5, 0.5, 0.5], 
-                             std=[0.5, 0.5, 0.5])  
+            transforms.Normalize(mean=[0.485], std=[0.229])  
             ])
         return transformations
 

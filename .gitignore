@@ -10,5 +10,5 @@ sagemaker/credentials.ini
 .vscode/
 .cursorignore
 debug*
-./wandb/
+wandb/
 sagemaker/credentials.ini
