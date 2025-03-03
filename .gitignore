@@ -12,3 +12,7 @@ sagemaker/credentials.ini
 debug*
 wandb/
 sagemaker/credentials.ini
+results/
+checkpoints/
+model/
+*.pth
