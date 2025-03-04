@@ -163,7 +163,6 @@ def main(args):
     wandb.init(
         project=f"{args.model_name}",
         name=f"{args.model_name}_{datetime.now().strftime('%d-%m-%Y_%H-%M')}",
-        dir="/opt/ml/data/wandb",
         config={
             "epochs": args.epochs,
             "batch_size": args.batch_size,
@@ -205,7 +204,7 @@ def main(args):
     wandb.finish()
 
     s3 = boto3.client('s3')
-    local_wandb_dir = "/opt/ml/data/wandb"
+    local_wandb_dir = "/opt/ml/code/wandb"
     s3_bucket = "cad-brbh-datascience"
     s3_dest_prefix = "alzheimer_images/checkpoints/wandb"
     for root, _, files in os.walk(local_wandb_dir):
@@ -214,6 +213,17 @@ def main(args):
             relative_path = os.path.relpath(local_path, local_wandb_dir)
             s3_key = os.path.join(s3_dest_prefix, relative_path)
             s3.upload_file(local_path, s3_bucket, s3_key)
+
+    # local_model_dir = "/tmp/wandb"
+    # s3_bucket = "cad-brbh-datascience"
+    # s3_dest_prefix = "alzheimer_images/checkpoints/wandb"
+    # for root, _, files in os.walk(local_model_dir):
+    #     for file in files:
+    #         local_path = os.path.join(root, file)
+    #         relative_path = os.path.relpath(local_path, local_wandb_dir)
+    #         s3_key = os.path.join(s3_dest_prefix, relative_path)
+    #         s3.upload_file(local_path, s3_bucket, s3_key)
+
 
     return
 
