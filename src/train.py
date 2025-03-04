@@ -26,7 +26,7 @@ def create_dataloaders(train_dir, val_dir, resize, batch_size):
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 def plot_metrics(train_losses, train_accs, val_losses, val_accs, args):
-    epochs = range(1, int(args.epochs) + 1)
+    epochs = range(1, len(train_losses) + 1)
     
     plt.figure(figsize=(12, 10))
     
@@ -129,6 +129,10 @@ def train_model(model, epochs, train_dataloader, val_dataloader, criterion, opti
 
     best_f1_score = 0
 
+    stucked_epochs = 0
+    max_stucked_epochs = 5
+    delta_min = 0.08
+
     for i in range(epochs):
         epoch_loss = 0
         correct_predictions = 0
@@ -156,9 +160,17 @@ def train_model(model, epochs, train_dataloader, val_dataloader, criterion, opti
 
         val_loss, val_acc, confusion_matrix, f1_score = evaluate_model(model, val_dataloader, criterion, device)
         
-        if f1_score > best_f1_score:
+
+        if f1_score > best_f1_score * (1 + delta_min):
             best_f1_score = f1_score
+            stucked_epochs = 0
             torch.save(model.state_dict(), os.path.join(args.checkpoint_dir, "best_model.pth"))
+        else:
+            stucked_epochs += 1
+
+        if stucked_epochs >= max_stucked_epochs:
+            print(f"Early stopping at epoch {i+1} because of no improvement. Best f1_score: {best_f1_score} - val_loss: {val_loss} - val_acc: {val_acc}")
+            break
         
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)

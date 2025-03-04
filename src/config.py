@@ -8,7 +8,7 @@ class Config:
 
     NUM_CLASSES = 4
     LEARNING_RATE = 0.0001
-    EPOCHS = 10
+    EPOCHS = 60
     BATCH_SIZE = 128
     RESIZE = 224
 
