@@ -127,6 +127,8 @@ def train_model(model, epochs, train_dataloader, val_dataloader, criterion, opti
 
     model.train()
 
+    best_f1_score = 0
+
     for i in range(epochs):
         epoch_loss = 0
         correct_predictions = 0
@@ -153,6 +155,11 @@ def train_model(model, epochs, train_dataloader, val_dataloader, criterion, opti
         train_losses.append(epoch_loss)
 
         val_loss, val_acc, confusion_matrix, f1_score = evaluate_model(model, val_dataloader, criterion, device)
+        
+        if f1_score > best_f1_score:
+            best_f1_score = f1_score
+            torch.save(model.state_dict(), os.path.join(args.checkpoint_dir, "best_model.pth"))
+        
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)
 
