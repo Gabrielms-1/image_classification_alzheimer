@@ -60,7 +60,8 @@ estimator = PyTorch(
         {'Name': 'train:loss', 'Regex': 'train_loss: ([0-9\\.]+)'},
         {'Name': 'train:accuracy', 'Regex': 'train_accuracy: ([0-9\\.]+)'},
         {'Name': 'val:loss', 'Regex':  'val_loss: ([0-9\\.]+)'},
-        {'Name': 'val:accuracy', 'Regex':  'val_accuracy: ([0-9\\.]+)'}
+        {'Name': 'val:accuracy', 'Regex':  'val_accuracy: ([0-9\\.]+)'},
+        {'Name': 'val:f1_score', 'Regex':  'f1_score: ([0-9\\.]+)'},
     ],
     enable_sagemaker_metrics=True,
     requirements_file="requirements.txt"

@@ -6,6 +6,10 @@ import wandb
 from datetime import datetime
 import matplotlib.pyplot as plt
 import boto3
+from PIL import Image
+import io
+import numpy as np
+import seaborn as sns
 
 from dataset import FolderBasedDataset, create_data_loaders
 from network import AlexNet
@@ -20,8 +24,6 @@ def create_dataloaders(train_dir, val_dir, resize, batch_size):
     return train_dataloader, val_dataloader
 
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from PIL import Image
-import io
 
 def plot_metrics(train_losses, train_accs, val_losses, val_accs, args):
     epochs = range(1, int(args.epochs) + 1)
@@ -59,12 +61,39 @@ def plot_metrics(train_losses, train_accs, val_losses, val_accs, args):
 
     return image
 
+def compute_f1_score(confusion_matrix, average="macro"):
+    num_classes = confusion_matrix.shape[0]
+    f1_scores = []
+    supports = []
+
+    for i in range(num_classes):
+        tp = confusion_matrix[i, i]
+        fp = confusion_matrix[i, :].sum() - tp
+        fn = confusion_matrix[:, i].sum() - tp
+
+        if (2 * tp + fp + fn) > 0:
+            f1 = (2 * tp) / (2 * tp + fp + fn)
+        else:
+            f1 = 0
+
+        f1_scores.append(f1)
+        supports.append(confusion_matrix[i, :].sum().item())
+
+    f1_scores = torch.tensor(f1_scores)
+    supports = torch.tensor(supports, dtype=torch.float)
+
+    if average == "macro":
+        return f1_scores.mean().item()
+
+
 def evaluate_model(model, val_dataloader, criterion, device):
     model.eval()
 
     val_loss = 0
     correct_predictions = 0
     total = 0
+
+    confusion_matrix = torch.zeros(4, 4, dtype=torch.int64)
 
     with torch.no_grad():
         for images, labels, _ in val_dataloader:
@@ -79,11 +108,15 @@ def evaluate_model(model, val_dataloader, criterion, device):
             total += labels.size(0)
             correct_predictions += (predicted == labels).sum().item()
 
-        
+            for p, t in zip(predicted, labels):
+                confusion_matrix[t.long(), p.long()] += 1
+
         average_loss = val_loss / len(val_dataloader.dataset)
         accuracy = correct_predictions / total
 
-    return average_loss, accuracy
+    f1_score = compute_f1_score(confusion_matrix, average="macro")
+
+    return average_loss, accuracy, confusion_matrix, f1_score
 
 
 def train_model(model, epochs, train_dataloader, val_dataloader, criterion, optimizer, device):
@@ -119,14 +152,14 @@ def train_model(model, epochs, train_dataloader, val_dataloader, criterion, opti
         epoch_loss = epoch_loss / len(train_dataloader.dataset)
         train_losses.append(epoch_loss)
 
-        val_loss, val_acc = evaluate_model(model, val_dataloader, criterion, device)
+        val_loss, val_acc, confusion_matrix, f1_score = evaluate_model(model, val_dataloader, criterion, device)
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)
 
         print(f"-" * 50)
         print(f"EPOCH: {i+1}")
         print(f"- train_loss: {epoch_loss} | train_accuracy: {correct_predictions / total_examples}")
-        print(f"- val_loss: {val_loss} | val_accuracy: {val_acc}" )
+        print(f"- val_loss: {val_loss} | val_accuracy: {val_acc} | f1_score: {f1_score}")
         print(f"-" * 50)
 
         epoch_accuracy = correct_predictions / total_examples
@@ -150,13 +183,14 @@ def train_model(model, epochs, train_dataloader, val_dataloader, criterion, opti
             "loss": epoch_loss,
             "accuracy": epoch_accuracy,
             "val_loss": val_loss,
-            "val_acc": val_acc
+            "val_acc": val_acc,
+            "f1_score": f1_score
         })
 
     final_model_path = os.path.join(args.model_dir, "final_alexnet_model.pth")
     torch.save(model.state_dict(), final_model_path)
     
-    return train_losses, train_accuracies, val_losses, val_accuracies
+    return train_losses, train_accuracies, val_losses, val_accuracies, confusion_matrix, f1_score
 
 
 def main(args):    
@@ -191,15 +225,35 @@ def main(args):
     if Config.OPTIMIZER == "SGD":
         optimizer = optim.SGD(model.parameters(), args.learning_rate, momentum=Config.SGD_MOMENTUM, weight_decay=Config.WEIGHT_DECAY)
 
-    train_losses, train_accuracies, val_losses, val_accuracies = train_model(model, args.epochs, train_dataloader, val_dataloader, criterion, optimizer, device)
+    train_losses, train_accuracies, val_losses, val_accuracies, confusion_matrix, f1_scores = train_model(model, args.epochs, train_dataloader, val_dataloader, criterion, optimizer, device)
 
     print(f" * Training completed. Saving metrics plot...")
 
     metrics_plot = plot_metrics(train_losses, train_accuracies, val_losses, val_accuracies, args)
-
     wandb.log({
         "metrics_plot": wandb.Image(metrics_plot)
     })
+
+    val_dataset = FolderBasedDataset(args.val, args.resize)
+
+    class_names = [str(val_dataset.int_to_label_map[i]) for i in range(confusion_matrix.shape[0])]
+    
+    cm_numpy = confusion_matrix.cpu().numpy()
+
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm_numpy, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=class_names, yticklabels=class_names)
+    plt.xlabel('Predicted Labels')
+    plt.ylabel('True Labels')
+    plt.title('Confusion Matrix')
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    cm_image = Image.open(buf)
+
+    wandb.log({"confusion_matrix_image": wandb.Image(cm_image)})
 
     wandb.finish()
 
@@ -213,17 +267,6 @@ def main(args):
             relative_path = os.path.relpath(local_path, local_wandb_dir)
             s3_key = os.path.join(s3_dest_prefix, relative_path)
             s3.upload_file(local_path, s3_bucket, s3_key)
-
-    # local_model_dir = "/tmp/wandb"
-    # s3_bucket = "cad-brbh-datascience"
-    # s3_dest_prefix = "alzheimer_images/checkpoints/wandb"
-    # for root, _, files in os.walk(local_model_dir):
-    #     for file in files:
-    #         local_path = os.path.join(root, file)
-    #         relative_path = os.path.relpath(local_path, local_wandb_dir)
-    #         s3_key = os.path.join(s3_dest_prefix, relative_path)
-    #         s3.upload_file(local_path, s3_bucket, s3_key)
-
 
     return
 

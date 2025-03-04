@@ -12,7 +12,6 @@ if not os.path.exists(local_dir):
 s3 = boto3.resource('s3')
 bucket = s3.Bucket(s3_bucket)
 
-
 for obj in bucket.objects.filter(Prefix=s3_prefix):
     target = os.path.join(local_dir, os.path.relpath(obj.key, s3_prefix))
     if "offline" not in target:
