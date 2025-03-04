@@ -42,7 +42,7 @@ class FolderBasedDataset(Dataset):
             transforms.Resize((self.resize, self.resize), interpolation=transforms.InterpolationMode.LANCZOS),  
             transforms.Grayscale(num_output_channels=1),
             transforms.ToTensor(),  
-            transforms.Normalize(mean=[0.485], std=[0.429])  
+            transforms.Normalize(mean=[0.485], std=[0.229])  
             ])
         return transformations
 
@@ -51,14 +51,14 @@ def create_data_loaders(train_dataset, valid_dataset, batch_size):
         train_dataset, 
         batch_size=batch_size, 
         shuffle=True,
-        num_workers=4,
+        num_workers=8,
         pin_memory=False)
     
     valid_loader = DataLoader(
         valid_dataset,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=4,
+        num_workers=8,
         pin_memory=False)
     
     return train_loader, valid_loader

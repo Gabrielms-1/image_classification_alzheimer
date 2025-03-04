@@ -8,12 +8,12 @@ class Config:
 
     NUM_CLASSES = 4
     LEARNING_RATE = 0.0001
-    EPOCHS = 60
+    EPOCHS = 100
     BATCH_SIZE = 128
     RESIZE = 224
 
     OPTIMIZER = "SGD"
-    WEIGHT_DECAY = 0.005
+    WEIGHT_DECAY = 0.0001
     SGD_MOMENTUM = 0.9
     
 

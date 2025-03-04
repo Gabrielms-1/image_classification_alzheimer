@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import boto3
 from PIL import Image
 import io
-import numpy as np
 import seaborn as sns
 
 from dataset import FolderBasedDataset, create_data_loaders
@@ -23,43 +22,6 @@ def create_dataloaders(train_dir, val_dir, resize, batch_size):
 
     return train_dataloader, val_dataloader
 
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-
-def plot_metrics(train_losses, train_accs, val_losses, val_accs, args):
-    epochs = range(1, len(train_losses) + 1)
-    
-    plt.figure(figsize=(12, 10))
-    
-    plt.subplot(1, 2, 1)
-    plt.plot(epochs, train_losses, 'b-o', label='Train Loss')
-    plt.plot(epochs, val_losses, 'r-o', label='Validation Loss')
-    plt.title('Loss Curve during Training')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend()
-    
-    plt.subplot(1, 2, 2)
-    plt.plot(epochs, train_accs, 'b-o', label='Train Accuracy')
-    plt.plot(epochs, val_accs, 'r-o', label='Validation Accuracy')
-    plt.title('Accuracy Curve during Training')
-    plt.xlabel('Epoch')
-    plt.ylabel('Accuracy')
-    plt.legend()
-    
-    plt.tight_layout()
-    plt.savefig(os.path.join(args.checkpoint_dir, "training_metrics.png"))
-    plt.show()
-    
-    print(f"Metrics plot saved as {os.path.join(args.checkpoint_dir, 'training_metrics.png')}")  
-
-    # Convert the plot to a PIL image
-    canvas = FigureCanvas(plt.gcf())
-    buf = io.BytesIO()
-    canvas.print_png(buf)
-    buf.seek(0)
-    image = Image.open(buf)
-
-    return image
 
 def compute_f1_score(confusion_matrix, average="macro"):
     num_classes = confusion_matrix.shape[0]
@@ -124,20 +86,17 @@ def train_model(model, epochs, train_dataloader, val_dataloader, criterion, opti
     train_accuracies = []
     val_losses = []
     val_accuracies = []
+    tolerance = 5
 
     model.train()
 
     best_f1_score = 0
-
-    stucked_epochs = 0
-    max_stucked_epochs = 5
-    delta_min = 0.08
-
+    best_val_acc = 0
     for i in range(epochs):
         epoch_loss = 0
         correct_predictions = 0
         total_examples = 0
-
+        
         for images, labels, _ in train_dataloader:
             images = images.to(device)
             labels = labels.to(device)
@@ -160,30 +119,21 @@ def train_model(model, epochs, train_dataloader, val_dataloader, criterion, opti
 
         val_loss, val_acc, confusion_matrix, f1_score = evaluate_model(model, val_dataloader, criterion, device)
         
-
-        if f1_score > best_f1_score * (1 + delta_min):
-            best_f1_score = f1_score
-            stucked_epochs = 0
-            torch.save(model.state_dict(), os.path.join(args.checkpoint_dir, "best_model.pth"))
-        else:
-            stucked_epochs += 1
-
-        if stucked_epochs >= max_stucked_epochs:
-            print(f"Early stopping at epoch {i+1} because of no improvement. Best f1_score: {best_f1_score} - val_loss: {val_loss} - val_acc: {val_acc}")
-            break
-        
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)
-
-        print(f"-" * 50)
-        print(f"EPOCH: {i+1}")
-        print(f"- train_loss: {epoch_loss} | train_accuracy: {correct_predictions / total_examples}")
-        print(f"- val_loss: {val_loss} | val_accuracy: {val_acc} | f1_score: {f1_score}")
-        print(f"-" * 50)
-
+        
         epoch_accuracy = correct_predictions / total_examples
         train_accuracies.append(epoch_accuracy)
     
+        wandb.log({
+            "epoch": i+1,
+            "loss": epoch_loss,
+            "accuracy": epoch_accuracy,
+            "val_loss": val_loss,
+            "val_acc": val_acc,
+            "f1_score": f1_score
+        })
+
         if (i + 1) % 10 == 0:
             torch.save(
                 {
@@ -197,14 +147,30 @@ def train_model(model, epochs, train_dataloader, val_dataloader, criterion, opti
                 os.path.join(args.checkpoint_dir,  f"checkpoint_{i+1}.pth")
             )
             print(f"Checkpoint {i+1} saved")
-        wandb.log({
-            "epoch": i+1,
-            "loss": epoch_loss,
-            "accuracy": epoch_accuracy,
-            "val_loss": val_loss,
-            "val_acc": val_acc,
-            "f1_score": f1_score
-        })
+        
+        if f1_score > best_f1_score:
+            best_f1_score = f1_score
+            torch.save(model.state_dict(), os.path.join(args.checkpoint_dir, "best_model.pth"))
+            print(f"Saving best model - f1_score: {f1_score:.4f}, val_accuracy: {val_acc:.4f}, val_loss: {val_loss:.4f}")
+
+        print(f"-" * 50)
+        print(f"EPOCH: {i+1}")
+        print(f"- train_loss: {epoch_loss:.4f} | train_accuracy: {correct_predictions / total_examples:.4f}")
+        print(f"- val_loss: {val_loss:.4f} | val_accuracy: {val_acc:.4f} | f1_score: {f1_score:.4f}")
+        print(f"-" * 50)
+
+
+        if val_acc >= 0.89:
+            if val_acc > best_val_acc:
+                best_val_acc = val_acc
+                tolerance = 5
+            else:
+                tolerance -= 1
+            if tolerance <= 0:
+                torch.save(model.state_dict(), os.path.join(args.checkpoint_dir, "best_model_early_stop.pth"))
+                print(f"Early stopping at epoch {i+1} - f1_score: {f1_score:.4f}, val_accuracy: {val_acc:.4f}, val_loss: {val_loss:.4f}")
+                break
+
 
     final_model_path = os.path.join(args.model_dir, "final_alexnet_model.pth")
     torch.save(model.state_dict(), final_model_path)
@@ -214,7 +180,7 @@ def train_model(model, epochs, train_dataloader, val_dataloader, criterion, opti
 
 def main(args):    
     wandb.init(
-        project=f"{args.model_name}",
+        project="Alzheimer_AlexNet",
         name=f"{args.model_name}_{datetime.now().strftime('%d-%m-%Y_%H-%M')}",
         config={
             "epochs": args.epochs,
@@ -248,11 +214,6 @@ def main(args):
 
     print(f" * Training completed. Saving metrics plot...")
 
-    metrics_plot = plot_metrics(train_losses, train_accuracies, val_losses, val_accuracies, args)
-    wandb.log({
-        "metrics_plot": wandb.Image(metrics_plot)
-    })
-
     val_dataset = FolderBasedDataset(args.val, args.resize)
 
     class_names = [str(val_dataset.int_to_label_map[i]) for i in range(confusion_matrix.shape[0])]
@@ -278,7 +239,7 @@ def main(args):
 
     s3 = boto3.client('s3')
     local_wandb_dir = "/opt/ml/code/wandb"
-    s3_bucket = "cad-brbh-datascience"
+    s3_bucket = Config.S3_BUCKET
     s3_dest_prefix = "alzheimer_images/checkpoints/wandb"
     for root, _, files in os.walk(local_wandb_dir):
         for file in files:
