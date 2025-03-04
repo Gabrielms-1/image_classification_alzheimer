@@ -5,6 +5,7 @@ import argparse
 import wandb
 from datetime import datetime
 import matplotlib.pyplot as plt
+import boto3
 
 from dataset import FolderBasedDataset, create_data_loaders
 from network import AlexNet
@@ -151,6 +152,10 @@ def train_model(model, epochs, train_dataloader, val_dataloader, criterion, opti
             "val_loss": val_loss,
             "val_acc": val_acc
         })
+
+    final_model_path = os.path.join(args.model_dir, "final_alexnet_model.pth")
+    torch.save(model.state_dict(), final_model_path)
+    
     return train_losses, train_accuracies, val_losses, val_accuracies
 
 
@@ -158,6 +163,7 @@ def main(args):
     wandb.init(
         project=f"{args.model_name}",
         name=f"{args.model_name}_{datetime.now().strftime('%d-%m-%Y_%H-%M')}",
+        dir="/opt/ml/data/wandb",
         config={
             "epochs": args.epochs,
             "batch_size": args.batch_size,
@@ -166,7 +172,7 @@ def main(args):
             "resize": args.resize,
             "optimizer": Config.OPTIMIZER,
             "weight_decay": Config.WEIGHT_DECAY,
-        }
+        },
     )
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
@@ -197,6 +203,17 @@ def main(args):
     })
 
     wandb.finish()
+
+    s3 = boto3.client('s3')
+    local_wandb_dir = "/opt/ml/data/wandb"
+    s3_bucket = "cad-brbh-datascience"
+    s3_dest_prefix = "alzheimer_images/checkpoints/wandb"
+    for root, _, files in os.walk(local_wandb_dir):
+        for file in files:
+            local_path = os.path.join(root, file)
+            relative_path = os.path.relpath(local_path, local_wandb_dir)
+            s3_key = os.path.join(s3_dest_prefix, relative_path)
+            s3.upload_file(local_path, s3_bucket, s3_key)
 
     return
 

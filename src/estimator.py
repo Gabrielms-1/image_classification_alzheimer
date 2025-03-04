@@ -49,11 +49,10 @@ estimator = PyTorch(
     security_group_ids=network_config['NETWORK']['security_group_ids'].split(','),
     checkpoint_s3_uri=os.path.join(Config.S3_CHECKPOINT_DIR, f"{timestamp}"),
     checkpoint_local_path="/opt/ml/checkpoints",
-    output_path=Config.S3_OUTPUT_DIR + f"/{timestamp}",
+    output_path=Config.S3_OUTPUT_DIR + "/" + timestamp,
     environment={
         "WANDB_API_KEY": network_config["WANDB"]["wandb_api_key"],
         "WANDB_MODE": "offline",
-        "WANDB_DIR": "/opt/ml/model/",
         "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
     },
     metric_definitions=[

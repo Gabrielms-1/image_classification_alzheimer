@@ -8,8 +8,8 @@ class Config:
 
     NUM_CLASSES = 4
     LEARNING_RATE = 0.0001
-    EPOCHS = 50
-    BATCH_SIZE = 64
+    EPOCHS = 10
+    BATCH_SIZE = 128
     RESIZE = 224
 
     #OPTIMIZER = "Adam"
