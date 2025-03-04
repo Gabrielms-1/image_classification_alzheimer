@@ -42,7 +42,7 @@ class FolderBasedDataset(Dataset):
             transforms.Resize((self.resize, self.resize), interpolation=transforms.InterpolationMode.LANCZOS),  
             transforms.Grayscale(num_output_channels=1),
             transforms.ToTensor(),  
-            transforms.Normalize(mean=[0.485], std=[0.229])  
+            transforms.Normalize(mean=[0.485], std=[0.429])  
             ])
         return transformations
 
