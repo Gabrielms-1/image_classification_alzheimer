@@ -63,7 +63,7 @@ val_loss 0.3704
 
 ## Goals
 
-The initial idea is to achieve at least 92% accuracy and 0.92 f1-score.
+The initial idea is to achieve at least 91% accuracy and 0.91 f1-score.
 
 
 
@@ -78,7 +78,7 @@ The initial idea is to achieve at least 92% accuracy and 0.92 f1-score.
 
 ### Next steps
 - Implement data augmentation techniques
-- Detail the dataset split and class distribution in the README.md
+- 
 - 
 
 
