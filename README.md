@@ -71,7 +71,7 @@ The best model (saved at epoch 78) achieved:
 - **Loss:** 0.04
 - **F1 Score:** 0.99
 
-<img src="wandb/offline-run-20250304_195409-cad-alexnet-classification-RGB-2025-03-04-19-48-33-470-a3dh41-algo-1/files/media/images/confusion_matrix_image_100_34ec8d483df2e72a2f4b.png" alt="Confusion Matrix" width="500"/>
+<img src="data/notes/confusion_matrix_image_100_34ec8d483df2e72a2f4b.png" alt="Confusion Matrix" width="500"/>
 
 Note: The model sometimes confuses Non Demented and Very Mild Demented classes, indicating an opportunity for further refinement.
 
