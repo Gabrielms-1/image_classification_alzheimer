@@ -49,7 +49,6 @@ class AlexNet(nn.Module):
         return x
 
 if __name__ == "__main__":
-    # Teste com um tensor de entrada (batch_size=1, 3 canais, 224x224)
     model = AlexNet(num_classes=4)
     x = torch.randn(1, 3, 224, 224)
     output = model(x)
