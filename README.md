@@ -13,6 +13,9 @@ The implementation serves as a technical showcase for medical image analysis wor
 
 - **Alzheimer's MRI Image Collection**
 - Class distribution: 4 stages of Alzheimer's progression
+
+<img src="data/notes/dataset_sample.png" alt="Confusion Matrix" width="500"/>
+
 ---------------------------------
 #### Class Distribution
 
