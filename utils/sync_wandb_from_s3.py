@@ -44,11 +44,6 @@ def sync_wandb_to_s3(checkpoint):
         subprocess.run(["wandb", "sync", os.path.join(local_dir, checkpoint)])
 
 if __name__ == "__main__":
-    """
-    Executes the synchronization of checkpoints between S3 and the local directory.
-    First, checkpoints are downloaded from S3 to the local directory.
-    Then, local checkpoints containing 'offline' are synchronized back to the wandb remote.
-    """
     print("Syncing wandb from s3 to local")
     for obj in bucket.objects.filter(Prefix=s3_prefix):
         sync_wandb_from_s3(obj)
