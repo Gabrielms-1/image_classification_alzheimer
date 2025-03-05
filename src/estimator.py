@@ -10,6 +10,17 @@ from config import Config
 network_config = configparser.ConfigParser()
 network_config.read("sagemaker/credentials.ini")
 
+"""
+    Configure and execute the SageMaker training job.
+
+    The function performs the following tasks:
+    - Reads network credentials and tag settings from the credentials.ini file.
+    - Sets up the SageMaker session using the designated S3 bucket.
+    - Defines the PyTorch estimator with specified hyperparameters, network configurations,
+      checkpoint settings, and metric definitions.
+    - Initiates the training job with the provided training and validation directories.
+"""
+
 sagemaker_session_bucket = Config.S3_BUCKET
 
 session = sagemaker.Session(

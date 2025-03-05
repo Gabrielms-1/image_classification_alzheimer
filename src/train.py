@@ -1,5 +1,7 @@
 import torch
 import torch.optim as optim
+import torch.nn as nn
+from torch.utils.data import DataLoader
 import os
 import argparse
 import wandb
@@ -10,12 +12,31 @@ from PIL import Image
 import io
 import seaborn as sns
 
-
 from dataset import FolderBasedDataset, create_data_loaders
 from network import AlexNet
 from config import Config
 
-def create_dataloaders(train_dir, val_dir, resize, batch_size):
+"""
+Module for training an AlexNet model for image classification.
+This script handles data loading, training, evaluation, saving checkpoints,
+logging metrics, and uploading results to AWS S3.
+"""
+
+def create_dataloaders(train_dir: str, val_dir: str, resize: int, batch_size: int) -> tuple[DataLoader, DataLoader]:
+    """
+    Create dataloaders for training and validation datasets.
+
+    Parameters:
+        train_dir (str): Directory path for training data.
+        val_dir (str): Directory path for validation data.
+        resize (int): Resize factor for images.
+        batch_size (int): Batch size for the dataloaders.
+
+    Returns:
+        tuple: A tuple containing:
+            - train_dataloader: DataLoader for training dataset.
+            - val_dataloader: DataLoader for validation dataset.
+    """
     train_dataset = FolderBasedDataset(train_dir, resize)
     val_dataset = FolderBasedDataset(val_dir, resize)
 
@@ -24,7 +45,17 @@ def create_dataloaders(train_dir, val_dir, resize, batch_size):
     return train_dataloader, val_dataloader
 
 
-def compute_f1_score(confusion_matrix, average="macro"):
+def compute_f1_score(confusion_matrix: torch.Tensor, average: str = "macro") -> float:
+    """
+    Compute the macro F1 score based on the confusion matrix.
+
+    Parameters:
+        confusion_matrix (torch.Tensor): Tensor representing the confusion matrix.
+        average (str): The type of averaging to perform on the data. Default is "macro".
+
+    Returns:
+        float: The computed macro F1 score.
+    """
     num_classes = confusion_matrix.shape[0]
     f1_scores = []
     supports = []
@@ -49,7 +80,23 @@ def compute_f1_score(confusion_matrix, average="macro"):
         return f1_scores.mean().item()
 
 
-def evaluate_model(model, val_dataloader, criterion, device):
+def evaluate_model(model: nn.Module, val_dataloader: DataLoader, criterion: nn.Module, device: torch.device) -> tuple[float, float, torch.Tensor, float]:
+    """
+    Evaluate the model on the validation dataset.
+
+    Parameters:
+        model (torch.nn.Module): The model to evaluate.
+        val_dataloader (DataLoader): DataLoader for the validation dataset.
+        criterion (torch.nn.Module): Loss function.
+        device (torch.device): Device on which to run evaluation.
+
+    Returns:
+        tuple: A tuple containing:
+            - average_loss (float): Average loss on the validation dataset.
+            - accuracy (float): Accuracy on the validation dataset.
+            - confusion_matrix (torch.Tensor): Confusion matrix.
+            - f1_score (float): Macro F1 score.
+    """
     model.eval()
 
     val_loss = 0
@@ -82,7 +129,30 @@ def evaluate_model(model, val_dataloader, criterion, device):
     return average_loss, accuracy, confusion_matrix, f1_score
 
 
-def train_model(model, total_epochs, start_epoch, train_dataloader, val_dataloader, criterion, optimizer, device):
+def train_model(model: nn.Module, total_epochs: int, start_epoch: int, train_dataloader: DataLoader, val_dataloader: DataLoader, criterion: nn.Module, optimizer: optim.Optimizer, device: torch.device) -> tuple[list[float], list[float], list[float], list[float], torch.Tensor, float]:
+    """
+    Train the model and evaluate it on the validation set at each epoch.
+    Saves checkpoints and the best model based on macro F1 score.
+
+    Parameters:
+        model (torch.nn.Module): The model to train.
+        total_epochs (int): Total number of epochs for training.
+        start_epoch (int): The starting epoch (useful for resuming training).
+        train_dataloader (DataLoader): DataLoader for the training dataset.
+        val_dataloader (DataLoader): DataLoader for the validation dataset.
+        criterion (torch.nn.Module): Loss function.
+        optimizer (torch.optim.Optimizer): Optimizer for training.
+        device (torch.device): Device on which to perform training.
+
+    Returns:
+        tuple: A tuple containing:
+            - train_losses (list): List of training losses per epoch.
+            - train_accuracies (list): List of training accuracies per epoch.
+            - val_losses (list): List of validation losses per epoch.
+            - val_accuracies (list): List of validation accuracies per epoch.
+            - confusion_matrix (torch.Tensor): Confusion matrix from the final epoch.
+            - f1_score (float): Macro F1 score from the final epoch.
+    """
     train_losses = []
     train_accuracies = []
     val_losses = []
@@ -188,9 +258,17 @@ def train_model(model, total_epochs, start_epoch, train_dataloader, val_dataload
     return train_losses, train_accuracies, val_losses, val_accuracies, confusion_matrix, f1_score
 
 
-def main(args):    
+def main(args: argparse.Namespace):
+    """
+    Main function to initialize training, set up logging, and save final outputs.
+    It handles configurations, data loading, model preparation, and AWS S3 upload
+    of the metrics.
+
+    Parameters:
+        args (argparse.Namespace): Command line arguments.
+    """
     augmentation_transformations = Config.AUGMENTATION_TRANSFORMATIONS
-    
+
     wandb.init(
         project="Alzheimer_AlexNet",
         name=f"{args.model_name}_{datetime.now().strftime('%d-%m-%Y_%H-%M')}",

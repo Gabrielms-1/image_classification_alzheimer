@@ -8,7 +8,20 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 
-def load_model(model_path):
+"""
+Module for performing model inference on an image dataset using a pretrained AlexNet model.
+"""
+
+def load_model(model_path: str) -> nn.Module:
+    """
+    Load a pretrained AlexNet model from the specified checkpoint file.
+
+    Parameters:
+        model_path (str): The file path to the model checkpoint.
+
+    Returns:
+        torch.nn.Module: The AlexNet model set to evaluation mode.
+    """
     checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
     model = AlexNet(num_classes=4)
     model.load_state_dict(checkpoint["model_state_dict"])
@@ -16,7 +29,17 @@ def load_model(model_path):
     
     return model
 
-def main(model_path, images_path):
+def main(model_path: str, images_path: str) -> None:
+    """
+    Run inference on a folder of images, display the confusion matrix, and print the accuracy.
+
+    Parameters:
+        model_path (str): The file path to the model checkpoint.
+        images_path (str): The path to the folder containing the test images.
+
+    Returns:
+        None
+    """
     model = load_model(model_path)
 
     dataset = FolderBasedDataset(images_path, 224)

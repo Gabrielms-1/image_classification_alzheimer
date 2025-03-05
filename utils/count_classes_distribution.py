@@ -3,7 +3,20 @@ from collections import defaultdict
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def count_images_in_directory(directory):
+"""
+Module for counting the number of image files per class in a dataset and visualizing the class distribution across different splits.
+"""
+
+def count_images_in_directory(directory: str) -> defaultdict:
+    """
+    Count the number of image files per classification in a given directory.
+
+    Parameters:
+        directory (str): The path to the directory containing class subdirectories with image files.
+
+    Returns:
+        defaultdict: A dictionary with class names as keys and the number of image files as values.
+    """
     class_counts = defaultdict(int)
     
     for root, _, files in os.walk(directory):
@@ -14,6 +27,12 @@ def count_images_in_directory(directory):
     return class_counts
 
 def main():
+    """
+    Process image datasets for train, test, and valid splits, display a table of class distributions and plots.
+
+    This function traverses the dataset directories, counts image files for each class, constructs a DataFrame 
+    showing the distribution of classes across dataset splits, and creates both absolute and percentage stacked bar plots.
+    """
     base_dir = 'data/raw'
     sets = ['train', 'test', 'valid']
     
