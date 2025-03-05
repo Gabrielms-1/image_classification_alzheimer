@@ -39,6 +39,7 @@ Class distribution between splits table:
 
 <img src="data/notes/alexnet_arch.png" alt="AlexNet architecture" width="500"/>
 <p><small>(Original AlexNet architecture)</small></p>
+
 - Input: 32x32 grayscale MRI slices (1 channel)
 - Feature extractor:
   - 5 convolutional blocks (Conv2D + BatchNorm + ReLU + MaxPool)
@@ -52,18 +53,19 @@ Class distribution between splits table:
 ## Baseline
 
 We started with the architecture described above and the following parameters:
-    LEARNING_RATE = 0.0001
-    EPOCHS = 100
-    BATCH_SIZE = 128
+Learning rate: 0.0001
+Epochs: 100
+Batch size = 128
 
-    OPTIMIZER = "SGD"
-    WEIGHT_DECAY = 0.0001
-    SGD_MOMENTUM = 0.9
+Optimizer = "SGD"
+Weight decay = 0.0001
+Momentum = 0.9
 
 From these parameters, I obtained the following result in the best trained model:
 f1_score 0.89278
 val_acc 0.88421
 val_loss 0.3704
+
 <img src="wandb/offline-run-20250304_195409-cad-alexnet-classification-RGB-2025-03-04-19-48-33-470-a3dh41-algo-1/files/media/images/confusion_matrix_image_100_34ec8d483df2e72a2f4b.png" alt="Confusion Matrix" width="500"/>
 
 --------------
@@ -71,16 +73,21 @@ val_loss 0.3704
 ## Results
 
 Using the best model saved at epoch 78, I got this results:
-<img src="data/notes/val_chart.png">
-
 Accuracy: 0.98
 Loss: 0.04
 F1 Score: 0.99
 
-For some reason, the model still confused about the classes NonDemented and VeryMildDemented:
+<img src="data/notes/val_chart.png">
+
+
+
+<p>
+<p>
+- For some reason, the model still confused about the classes NonDemented and VeryMildDemented:
+
 <img src= "data/notes/Figure_1.png">
 
-#### Parametros usados:
+#### Hyperparameters being used:
 Learning Rate: 0.0005
 Optimizer: SGD
 Weight Decay: 0.0001
