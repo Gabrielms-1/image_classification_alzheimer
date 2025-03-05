@@ -65,13 +65,18 @@ After training using the baseline parameters, results were as follows:
 - **F1 Score:** 0.89278
 - **Validation Accuracy:** 0.88421
 - **Validation Loss:** 0.3704
+<img src="data/notes/confusion_matrix_image_100_34ec8d483df2e72a2f4b.png" alt="Confusion Matrix" width="500"/>
 
-The best model (saved at epoch 78) achieved:
+
+
+### Results
+After adjusting the learning rate and momentum to 0.0005 and 0.85 respectively, the best model (saved at epoch 78) achieved:
 - **Accuracy:** 0.98
 - **Loss:** 0.04
 - **F1 Score:** 0.99
 
-<img src="data/notes/confusion_matrix_image_100_34ec8d483df2e72a2f4b.png" alt="Confusion Matrix" width="500"/>
+<img src="data/notes/Figure_1.png" alt="Confusion Matrix" width="500"/>
+
 
 Note: The model sometimes confuses Non Demented and Very Mild Demented classes, indicating an opportunity for further refinement.
 
