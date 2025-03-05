@@ -1,9 +1,9 @@
 *__pycache__/
 .dvc/
-data/
+data/raw/
 .DS_Store
 venv/
-/data
+
 sagemaker/credentials.ini
 */credentials.ini
 .cursorrules
@@ -14,5 +14,5 @@ wandb/
 sagemaker/credentials.ini
 results/
 checkpoints/
-model/
+models/
 *.pth

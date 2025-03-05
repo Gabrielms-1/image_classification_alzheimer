@@ -8,6 +8,7 @@ from albumentations.pytorch import ToTensorV2
 import cv2
 import numpy as np
 from config import Config
+
 def get_albumentations_transform(resize):
     
     params = Config.AUGMENTATION_TRANSFORMATIONS

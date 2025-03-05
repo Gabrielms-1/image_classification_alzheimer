@@ -28,9 +28,9 @@ def sync_wandb_to_s3(checkpoint):
 
 
 if __name__ == "__main__":
-    # print("Syncing wandb from s3 to local")
-    # for obj in bucket.objects.filter(Prefix=s3_prefix):
-    #     sync_wandb_from_s3(obj)
+    print("Syncing wandb from s3 to local")
+    for obj in bucket.objects.filter(Prefix=s3_prefix):
+        sync_wandb_from_s3(obj)
     
     print("Syncing local wandb to s3")    
     for checkpoint in os.listdir(local_dir):

@@ -142,7 +142,6 @@ def train_model(model, total_epochs, start_epoch, train_dataloader, val_dataload
                 "loss": epoch_loss,
                 "accuracy": epoch_accuracy,
                 "optimizer_state_dict": optimizer.state_dict(),
-                "wandb_config": wandb.config
             }, os.path.join(args.checkpoint_dir,  f"checkpoint_{epoch+1}.pth"))
             print(f"Checkpoint {epoch+1} saved")
 
@@ -154,7 +153,6 @@ def train_model(model, total_epochs, start_epoch, train_dataloader, val_dataload
                 "loss": epoch_loss,
                 "accuracy": epoch_accuracy,
                 "optimizer_state_dict": optimizer.state_dict(),
-                "wandb_config": wandb.config
             }, os.path.join(args.checkpoint_dir,  f"best_model.pth"))
             print(f"Saving best model - f1_score: {f1_score:.4f}, val_accuracy: {val_acc:.4f}, val_loss: {val_loss:.4f}")
 
@@ -177,7 +175,6 @@ def train_model(model, total_epochs, start_epoch, train_dataloader, val_dataload
         #             "loss": epoch_loss,
         #             "accuracy": epoch_accuracy,
         #             "optimizer_state_dict": optimizer.state_dict(),
-        #             "wandb_config": wandb.config
         #         }, os.path.join(args.checkpoint_dir,  f"best_model_early_stop.pth"))
                 
         #         print(f"Early stopping at epoch {epoch+1} - f1_score: {f1_score:.4f}, val_accuracy: {val_acc:.4f}, val_loss: {val_loss:.4f}")
