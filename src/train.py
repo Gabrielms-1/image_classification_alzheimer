@@ -10,6 +10,7 @@ from PIL import Image
 import io
 import seaborn as sns
 
+
 from dataset import FolderBasedDataset, create_data_loaders
 from network import AlexNet
 from config import Config
@@ -81,7 +82,7 @@ def evaluate_model(model, val_dataloader, criterion, device):
     return average_loss, accuracy, confusion_matrix, f1_score
 
 
-def train_model(model, epochs, train_dataloader, val_dataloader, criterion, optimizer, device):
+def train_model(model, total_epochs, start_epoch, train_dataloader, val_dataloader, criterion, optimizer, device):
     train_losses = []
     train_accuracies = []
     val_losses = []
@@ -92,7 +93,7 @@ def train_model(model, epochs, train_dataloader, val_dataloader, criterion, opti
 
     best_f1_score = 0
     best_val_acc = 0
-    for i in range(epochs):
+    for epoch in range(start_epoch, total_epochs):
         epoch_loss = 0
         correct_predictions = 0
         total_examples = 0
@@ -104,29 +105,29 @@ def train_model(model, epochs, train_dataloader, val_dataloader, criterion, opti
             optimizer.zero_grad()
 
             outputs = model(images)
-            _, predicted = torch.max(outputs.detach(), 1) 
+            _, predicted = torch.max(outputs.detach(), 1)
             loss = criterion(outputs, labels)
             loss.backward()
-            optimizer.step()   
+            optimizer.step()
 
             epoch_loss += loss.item() * images.size(0) # loss x batch size
 
             correct_predictions += (predicted == labels).sum().item()
             total_examples += labels.size(0)
-        
+
         epoch_loss = epoch_loss / len(train_dataloader.dataset)
         train_losses.append(epoch_loss)
 
         val_loss, val_acc, confusion_matrix, f1_score = evaluate_model(model, val_dataloader, criterion, device)
-        
+
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)
-        
+
         epoch_accuracy = correct_predictions / total_examples
         train_accuracies.append(epoch_accuracy)
-    
+
         wandb.log({
-            "epoch": i+1,
+            "epoch": epoch + 1,
             "loss": epoch_loss,
             "accuracy": epoch_accuracy,
             "val_loss": val_loss,
@@ -134,51 +135,65 @@ def train_model(model, epochs, train_dataloader, val_dataloader, criterion, opti
             "f1_score": f1_score
         })
 
-        if (i + 1) % 10 == 0:
-            torch.save(
-                {
-                    "model_state_dict": model.state_dict(),
-                    "epoch": i+1,
-                    "loss": epoch_loss,
-                    "accuracy": epoch_accuracy,
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "wandb_config": wandb.config
-                },
-                os.path.join(args.checkpoint_dir,  f"checkpoint_{i+1}.pth")
-            )
-            print(f"Checkpoint {i+1} saved")
-        
+        if (epoch + 1) % 10 == 0:
+            torch.save({
+                "model_state_dict": model.state_dict(),
+                "epoch": epoch + 1,
+                "loss": epoch_loss,
+                "accuracy": epoch_accuracy,
+                "optimizer_state_dict": optimizer.state_dict(),
+                "wandb_config": wandb.config
+            }, os.path.join(args.checkpoint_dir,  f"checkpoint_{epoch+1}.pth"))
+            print(f"Checkpoint {epoch+1} saved")
+
         if f1_score > best_f1_score:
             best_f1_score = f1_score
-            torch.save(model.state_dict(), os.path.join(args.checkpoint_dir, "best_model.pth"))
+            torch.save({
+                "model_state_dict": model.state_dict(),
+                "epoch": epoch + 1,
+                "loss": epoch_loss,
+                "accuracy": epoch_accuracy,
+                "optimizer_state_dict": optimizer.state_dict(),
+                "wandb_config": wandb.config
+            }, os.path.join(args.checkpoint_dir,  f"best_model.pth"))
             print(f"Saving best model - f1_score: {f1_score:.4f}, val_accuracy: {val_acc:.4f}, val_loss: {val_loss:.4f}")
 
-        print(f"-" * 50)
-        print(f"EPOCH: {i+1}")
-        print(f"- train_loss: {epoch_loss:.4f} | train_accuracy: {correct_predictions / total_examples:.4f}")
+        print("-" * 50)
+        print(f"EPOCH: {epoch+1}")
+        print(f"- train_loss: {epoch_loss:.4f} | train_accuracy: {epoch_accuracy:.4f}")
         print(f"- val_loss: {val_loss:.4f} | val_accuracy: {val_acc:.4f} | f1_score: {f1_score:.4f}")
         print(f"-" * 50)
 
-
-        if val_acc >= 0.89:
-            if val_acc > best_val_acc:
-                best_val_acc = val_acc
-                tolerance = 5
-            else:
-                tolerance -= 1
-            if tolerance <= 0:
-                torch.save(model.state_dict(), os.path.join(args.checkpoint_dir, "best_model_early_stop.pth"))
-                print(f"Early stopping at epoch {i+1} - f1_score: {f1_score:.4f}, val_accuracy: {val_acc:.4f}, val_loss: {val_loss:.4f}")
-                break
-
+        # if val_acc >= 0.91:
+        #     if val_acc > best_val_acc:
+        #         best_val_acc = val_acc
+        #         tolerance = 5
+        #     else:
+        #         tolerance -= 1
+        #     if tolerance <= 0:
+        #         torch.save({
+        #             "model_state_dict": model.state_dict(),
+        #             "epoch": epoch + 1,
+        #             "loss": epoch_loss,
+        #             "accuracy": epoch_accuracy,
+        #             "optimizer_state_dict": optimizer.state_dict(),
+        #             "wandb_config": wandb.config
+        #         }, os.path.join(args.checkpoint_dir,  f"best_model_early_stop.pth"))
+                
+        #         print(f"Early stopping at epoch {epoch+1} - f1_score: {f1_score:.4f}, val_accuracy: {val_acc:.4f}, val_loss: {val_loss:.4f}")
+        #         wandb.log({"last_epoch": epoch+1})
+                
+        #         break
 
     final_model_path = os.path.join(args.model_dir, "final_alexnet_model.pth")
     torch.save(model.state_dict(), final_model_path)
-    
+
     return train_losses, train_accuracies, val_losses, val_accuracies, confusion_matrix, f1_score
 
 
 def main(args):    
+    augmentation_transformations = Config.AUGMENTATION_TRANSFORMATIONS
+    
     wandb.init(
         project="Alzheimer_AlexNet",
         name=f"{args.model_name}_{datetime.now().strftime('%d-%m-%Y_%H-%M')}",
@@ -190,6 +205,13 @@ def main(args):
             "resize": args.resize,
             "optimizer": Config.OPTIMIZER,
             "weight_decay": Config.WEIGHT_DECAY,
+            "shift_limit": augmentation_transformations["shift_limit"],
+            "scale_limit": augmentation_transformations["scale_limit"],
+            "rotate_limit": augmentation_transformations["rotate_limit"],
+            "border_mode": augmentation_transformations["border_mode"],
+            "p": augmentation_transformations["p"],
+            "last_epoch": args.epochs,
+            "sgd_momentum": Config.SGD_MOMENTUM,
         },
     )
 
@@ -210,9 +232,17 @@ def main(args):
     if Config.OPTIMIZER == "SGD":
         optimizer = optim.SGD(model.parameters(), args.learning_rate, momentum=Config.SGD_MOMENTUM, weight_decay=Config.WEIGHT_DECAY)
 
-    train_losses, train_accuracies, val_losses, val_accuracies, confusion_matrix, f1_scores = train_model(model, args.epochs, train_dataloader, val_dataloader, criterion, optimizer, device)
+    resume_epoch = 0
+    if args.resume_checkpoint is not None:
+        checkpoint = torch.load(args.resume_checkpoint, map_location=device)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        resume_epoch = checkpoint["epoch"]
+        print(f"Resuming training from epoch: {resume_epoch}")
 
-    print(f" * Training completed. Saving metrics plot...")
+    train_losses, train_accuracies, val_losses, val_accuracies, confusion_matrix, f1_scores = train_model(model, args.epochs, resume_epoch, train_dataloader, val_dataloader, criterion, optimizer, device)
+
+    print(" * Training completed. Saving metrics plot...")
 
     val_dataset = FolderBasedDataset(args.val, args.resize)
 
@@ -264,6 +294,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_classes", type=int, default=Config.NUM_CLASSES)
     parser.add_argument("--resize", type=int, default=Config.RESIZE)
     parser.add_argument("--checkpoint_dir", default="/opt/ml/checkpoints")
+    parser.add_argument("--resume_checkpoint", default=None)
     args = parser.parse_args()
 
     main(args)

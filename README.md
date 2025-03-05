@@ -65,8 +65,6 @@ val_loss 0.3704
 
 The initial idea is to achieve at least 91% accuracy and 0.91 f1-score.
 
-
-
 ## Technologies Used
 - **PyTorch**: Core framework for CNN implementation (AlexNet), DataLoader creation, and training loop management with CUDA acceleration
 - **Sagemaker**: Orchestrates distributed training jobs with GPU instances, manages model artifacts/outputs, and handles hyperparameter configuration
@@ -74,12 +72,24 @@ The initial idea is to achieve at least 91% accuracy and 0.91 f1-score.
 - **MLOps**: Implements automated model versioning, S3-based checkpointing, and SageMaker pipelines for reproducible workflows
 - **Training Optimization**: Features early stopping, best model selection by F1-score, and incremental checkpoint saving
 - **AWS**: Leverages S3 for data storage/checkpoints and EC2 GPU instances via SageMaker for scalable model training
+- **Albumentations**: Used to apply some transformations in random samples to apply more diversity in the original data
+
+
+## Results
+
+After implementing **Albumentations**, I got f1_score = 0.92564, val_acc 0.91579, val_loss 0.26711
+I decided to apply this strategies in the transformation:
+- **Albumentations**:
+  - Normalize: 
+  - ShiftScaleRotate:
+  - <s>RandomBrightnessContrast: tried as a possibility to diversify the dataset, but it break the logic behind MRI images.</s>
+  - <s>ElasticTransform: removed after some bad results. Distortions seems to affect the MRI quality.</s>
 
 
 ### Next steps
 - Implement data augmentation techniques
-- 
-- 
+  - On-the-fly or generate augmented data
+- Document the code using docstrings
 
 
 
