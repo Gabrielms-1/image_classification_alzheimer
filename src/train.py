@@ -157,13 +157,13 @@ def train_model(model: nn.Module, total_epochs: int, start_epoch: int, train_dat
     train_accuracies = []
     val_losses = []
     val_accuracies = []
-    tolerance = 5
-
-    model.train()
+    tolerance = 5    
 
     best_f1_score = 0
     best_val_acc = 0
     for epoch in range(start_epoch, total_epochs):
+        model.train()
+        
         epoch_loss = 0
         correct_predictions = 0
         total_examples = 0

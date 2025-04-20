@@ -1,6 +1,6 @@
 *__pycache__/
 .dvc/
-data/raw/
+data/
 .DS_Store
 venv/
 
